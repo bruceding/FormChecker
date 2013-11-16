@@ -17,6 +17,11 @@ class FormCheck {
     const ERROR_CODE_TYPE = 1; 
 
     /**
+     * require 错误码
+     */
+    const ERROR_CODE_REQUIRE = 2;
+
+    /**
      * min_length 错误码 
      */
     const ERROR_CODE_MIN_LENGTH = 2;
@@ -65,6 +70,7 @@ class FormCheck {
             }
         }
 
+        return array('errcode' => 0, 'errmsg' => 'ok');
     }
 
     public static function _type($field) {
@@ -86,6 +92,18 @@ class FormCheck {
 
         if ($errcode) {
             $errmsg = "{$field['field']}'s type not right";
+        }
+
+        return array($errcode, $errmsg);
+    }
+
+    private static function _require($field) {
+
+        $errcode = 0;
+
+        if ($field['require'] === true && !$field['value']) {
+            $errcode = self::ERROR_CODE_REQUIRE;
+            $errmsg = "{$field['field']}'s not empty";
         }
 
         return array($errcode, $errmsg);
