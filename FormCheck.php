@@ -24,7 +24,12 @@ class FormCheck {
     /**
      * min_length 错误码 
      */
-    const ERROR_CODE_MIN_LENGTH = 2;
+    const ERROR_CODE_MIN_LENGTH = 3; 
+
+    /**
+     * max_length 错误码 
+     */
+    const ERROR_CODE_MAX_LENGTH = 4;
 
     /**
      * 允许的操作 
@@ -104,6 +109,25 @@ class FormCheck {
         if ($field['require'] === true && !$field['value']) {
             $errcode = self::ERROR_CODE_REQUIRE;
             $errmsg = "{$field['field']}'s not empty";
+        }
+
+        return array($errcode, $errmsg);
+    }
+
+    /**
+     * _min_length 
+     * 判断value的最小长度，一个中文汉字相当于3个字符
+     *
+     * @param mixed $field 
+     * @static
+     * @access private
+     * @return void
+     */
+    private static function _min_length($field) {
+        
+        if (strlen($field['value']) < $field['min_length']) {
+            $errcode = self::ERROR_CODE_MIN_LENGTH;
+            $errmsg = "{$field['field']}'s length at least {$field['min_length']}"; 
         }
 
         return array($errcode, $errmsg);
