@@ -96,6 +96,23 @@ class FormCheck {
             if (!is_array($field['value'])) {
                 $errcode = self::ERROR_CODE_TYPE;
             }
+        } else if (strtolower($field['type']) == 'email') {
+            if (filter_var($field['value'], FILTER_VALIDATE_EMAIL) === false) {
+                $errcode = self::ERROR_CODE_TYPE;
+            }
+        } else if (strtolower($field['type']) == 'url') {
+            if (filter_var($field['value'], FILTER_VALIDATE_URL) === false) {
+                $errcode = self::ERROR_CODE_TYPE;
+            } 
+        } else if (strtolower($field['type']) == 'date') {
+            $dateArr = date_parse($field['value']);
+            if ($dateArr && $dateArr['error_count'] === 0) {
+                if (checkdate($dateArr['month'], $dateArr['day'], $dateArr['year']) === false) {
+                    $errcode = self::ERROR_CODE_TYPE;
+                }  
+            } else {
+                $errcode = self::ERROR_CODE_TYPE;
+            }
         } else {
             throw new Exception('not support type');
         }
