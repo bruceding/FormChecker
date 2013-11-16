@@ -32,9 +32,14 @@ class FormCheck {
     const ERROR_CODE_MAX_LENGTH = 4;
 
     /**
+     * regexp 是否匹配正则表达式
+     */
+    const ERROR_CODE_REGEXP = 5;
+
+    /**
      * 允许的操作 
      */
-    private static $_operate = array('require', 'min_length', 'max_length', 'type');
+    private static $_operate = array('require', 'min_length', 'max_length', 'type', 'regexp');
 
 
     /**
@@ -69,7 +74,7 @@ class FormCheck {
                 if (in_array($key, self::$_operate)) {
                     list($errcode, $errmsg) = forward_static_call_array(array('FormCheck', '_'. $key), array($field));
                     if ($errcode) {
-                        return self::_error($errcode,$errmsg, $fields, $returnType);
+                        return self::_error($errcode,$errmsg, $field, $returnType);
                     }
                 } 
             }
@@ -127,7 +132,27 @@ class FormCheck {
         
         if (strlen($field['value']) < $field['min_length']) {
             $errcode = self::ERROR_CODE_MIN_LENGTH;
-            $errmsg = "{$field['field']}'s length at least {$field['min_length']}"; 
+            $errmsg = "{$field['field']}'s length at least {$field['min_length']} length"; 
+        }
+
+        return array($errcode, $errmsg);
+    }
+
+    private static function _max_length($field) {
+    
+        if (strlen($field['value']) >  $field['max_length']) {
+            $errcode = self::ERROR_CODE_MAX_LENGTH;
+            $errmsg = "{$field['field']}'s length at most {$field['max_length']} length"; 
+        }
+
+        return array($errcode, $errmsg);
+    }
+
+    private static function _regexp($field) {
+
+        if (preg_match($field['regexp'], $field['value']) === 0) {
+            $errcode = self::ERROR_CODE_REGEXP;
+            $errmsg = "{$field['field']} not match {$field['regexp']} pattern";
         }
 
         return array($errcode, $errmsg);
