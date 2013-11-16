@@ -19,22 +19,13 @@ regexp, 正则匹配.
 
 字段验证正常
 
-`<?php
-     $fields = array();
-	 $fields[] = array('field' => 'name', 'value'=> 'bruce', 'type'=> 'string', 'min_length' => 5);
-     $fields[] = array('field' => 'date', 'value'=> '2006-1-1 00:00:00', 'type'=> 'date');
-	 $res = FormCheck::check($fields);
-	 print_r($res);
-`
-
-`
-<?php
+```
 $fields = array();
 $fields[] = array('field' => 'name', 'value'=> 'bruce', 'type'=> 'string', 'min_length' => 5);
 $fields[] = array('field' => 'date', 'value'=> '2006-1-1 00:00:00', 'type'=> 'date');
 $res = FormCheck::check($fields);
 print_r($res);
-`
+```
 `
 Array
 (
