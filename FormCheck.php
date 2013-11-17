@@ -1,5 +1,14 @@
 <?php
-
+/**
+ * FormCheck 
+ * 字段验证工具类 
+ *
+ * @package 
+ * @version $id$
+ * @copyright 1997-2005 The PHP Group
+ * @author Tobias Schlitt <toby@php.net> 
+ * @license PHP Version 3.0 {@link http://www.php.net/license/3_0.txt}
+ */
 class FormCheck {
 
     /**
@@ -41,6 +50,10 @@ class FormCheck {
      */
     private static $_operate = array('require', 'min_length', 'max_length', 'type', 'regexp');
 
+    /**
+     * 允许的字段值 
+     */
+    private static $_allow_fields = array('require', 'min_length', 'max_length', 'type', 'regexp', 'field', 'type', 'value');
 
     /**
      * check 
@@ -57,19 +70,24 @@ class FormCheck {
     public static function check(array $fields, $returnType = self::RETURN_TYPE_JSON) {
         
         if (!$fields || !is_array($fields)) {
-            throw new InvalidException('invalid fields');
+            throw new InvalidArgumentException('invalid fields');
         }
         foreach ($fields as $field) {
             if (!is_array($field)) {
-                throw new InvalidException('invalid fields');
+                throw new InvalidArgumentException('invalid fields');
             } 
 
             if (!$field['field']) {
             
-                throw new InvalidException('field is not empty');
+                throw new InvalidArgumentException('field is not empty');
             }
 
             // 检查key的交集
+            $fieldsDiff = array_diff(array_keys($field), self::$_allow_fields);
+            if ($fieldsDiff) {
+                throw new InvalidArgumentException('fields:' . '\'' . join(',', $fieldsDiff) . '\'' . ' not allowed.');
+            }
+
             foreach ($field as $key => $val) {
                 if (in_array($key, self::$_operate)) {
                     list($errcode, $errmsg) = forward_static_call_array(array('FormCheck', '_'. $key), array($field));
@@ -83,6 +101,15 @@ class FormCheck {
         return array('errcode' => 0, 'errmsg' => 'ok');
     }
 
+    /**
+     * _type
+     * type类型验证,包括string,array,email,url,date
+     * 
+     * @param mixed $field 
+     * @static
+     * @access public
+     * @return void
+     */
     public static function _type($field) {
         
         $errcode = 0;
@@ -124,6 +151,15 @@ class FormCheck {
         return array($errcode, $errmsg);
     }
 
+    /**
+     * _require
+     * require 验证, 值为true时，会验证
+     * 
+     * @param mixed $field 
+     * @static
+     * @access private
+     * @return void
+     */
     private static function _require($field) {
 
         $errcode = 0;
@@ -155,6 +191,15 @@ class FormCheck {
         return array($errcode, $errmsg);
     }
 
+    /**
+     * _max_length 
+     * 最多字符判断
+     * 
+     * @param mixed $field 
+     * @static
+     * @access private
+     * @return void
+     */
     private static function _max_length($field) {
     
         if (strlen($field['value']) >  $field['max_length']) {
@@ -165,6 +210,15 @@ class FormCheck {
         return array($errcode, $errmsg);
     }
 
+    /**
+     * _regexp
+     * 正则表达式验证
+     * 
+     * @param mixed $field 
+     * @static
+     * @access private
+     * @return void
+     */
     private static function _regexp($field) {
 
         if (preg_match($field['regexp'], $field['value']) === 0) {
@@ -175,6 +229,18 @@ class FormCheck {
         return array($errcode, $errmsg);
     }
 
+    /**
+     * _error 
+     * 错误处理
+     * 
+     * @param mixed $errcode 
+     * @param mixed $errmsg 
+     * @param mixed $field 
+     * @param mixed $returnType 
+     * @static
+     * @access private
+     * @return void
+     */
     private static function _error($errcode, $errmsg, $field, $returnType) {
 
         $errmsg = $field['errmsg'] ? $field['errmsg'] : $errmsg;
