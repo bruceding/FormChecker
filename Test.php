@@ -1,9 +1,17 @@
 <?php
 require 'FormCheck.php';
 
+// 测试allow_fields 
+$fields = array();
+$fields[] = array('field' => 'name', 'value'=> 'bruce', 'valid' => true, 'passwd' => true);
+$res = FormCheck::check($fields);
+print_r($res);
+exit;
+
 // 测试type 操作 默认返回json
 $fields = array();
-$fields[] = array('field' => 'name', 'value'=> array(1), 'type'=> 'string');
+$fields[] = array('field' => 'name', 'value'=> 'bruce', 'type'=> 'string', 'min_length' => 6);
+$fields[] = array('field' => 'date', 'value'=> '2006-1-1 00:00:00', 'type'=> 'date');
 $res = FormCheck::check($fields);
 print_r($res);
 
@@ -16,8 +24,7 @@ print_r($res);
 
 // 测试 email 类型
 $fields = array();
-$fields[] = array('field' => 'name', 'value'=> 'demo@gmail.com', 'type'=> 'email');
-
+$fields[] = array('field' => 'name', 'value'=> 'demo@gmail.com', 'type'=> 'email', 'requier' => true);
 $res = FormCheck::check($fields);
 print_r($res);
 
