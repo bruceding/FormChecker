@@ -6,7 +6,6 @@ $fields = array();
 $fields[] = array('field' => 'name', 'value'=> 'bruce', 'valid' => true, 'passwd' => true);
 $res = FormCheck::check($fields);
 print_r($res);
-exit;
 
 // 测试type 操作 默认返回json
 $fields = array();
