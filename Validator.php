@@ -1,15 +1,12 @@
 <?php
+require_once "Validation.php";
 /**
- * FormCheck 
+ * Validator 
  * 字段验证工具类 
  *
- * @package 
- * @version $id$
- * @copyright 1997-2005 The PHP Group
- * @author Tobias Schlitt <toby@php.net> 
- * @license PHP Version 3.0 {@link http://www.php.net/license/3_0.txt}
+ * @author bruceding <dingjingdjdj@gmail.com> 
  */
-class FormCheck {
+class Validator {
 
     /**
      *  返回类型：json数据 
@@ -21,84 +18,59 @@ class FormCheck {
     const RETURN_TYPE_EXCEPTION = 2;
 
     /**
-     * type 错误码 
-     */
-    const ERROR_CODE_TYPE = 1; 
-
-    /**
-     * require 错误码
-     */
-    const ERROR_CODE_REQUIRE = 2;
-
-    /**
-     * min_length 错误码 
-     */
-    const ERROR_CODE_MIN_LENGTH = 3; 
-
-    /**
-     * max_length 错误码 
-     */
-    const ERROR_CODE_MAX_LENGTH = 4;
-
-    /**
-     * regexp 是否匹配正则表达式
-     */
-    const ERROR_CODE_REGEXP = 5;
-
-    /**
      * 允许的操作 
      */
-    private static $_operate = array('require', 'min_length', 'max_length', 'type', 'regexp');
+    protected static $_operate = array('require', 'min_length', 'max_length', 'type', 'regexp');
 
     /**
      * 允许的字段值 
      */
-    private static $_allow_fields = array('require', 'min_length', 'max_length', 'type', 'regexp', 'field', 'type', 'value');
+    protected static $_allow_fields = array('require', 'min_length', 'max_length', 'type', 'regexp', 'field', 'type', 'value', 'errmsg');
 
     /**
-     * check 
+     * validate 
      * 
      * @param array $fields  $fields = array(
      *                              array('field' => '', 'type'=> '', 'value'=> '', 'require' => true, 'errmsg' =>),
      *                              array('field' => '', 'type'=> '', 'value'=> '', 'min_length' => 8),
      *                              ) 
-     * @param mixed $returnType 
      * @static
      * @access public
      * @return void
      */
-    public static function check(array $fields, $returnType = self::RETURN_TYPE_JSON) {
+    public static function validate(array $fields) {
         
         if (!$fields || !is_array($fields)) {
-            throw new InvalidArgumentException('invalid fields');
+            return self::_quit('invalid fields');
         }
         foreach ($fields as $field) {
             if (!is_array($field)) {
-                throw new InvalidArgumentException('invalid fields');
+                return self::_quit('invalid fields');
             } 
 
-            if (!$field['field']) {
-            
-                throw new InvalidArgumentException('field is not empty');
+            if (!isset($field['field'])) {
+                return self::_quit('invalid fields');
             }
 
             // 检查key的交集
             $fieldsDiff = array_diff(array_keys($field), self::$_allow_fields);
             if ($fieldsDiff) {
-                throw new InvalidArgumentException('fields:' . '\'' . join(',', $fieldsDiff) . '\'' . ' not allowed.');
+                return self::_quit('fields:' . '\'' . join(',', $fieldsDiff) . '\'' . ' not allowed.');
             }
 
+            $validation = new Validation();
             foreach ($field as $key => $val) {
                 if (in_array($key, self::$_operate)) {
-                    list($errcode, $errmsg) = forward_static_call_array(array('FormCheck', '_'. $key), array($field));
-                    if ($errcode) {
-                        return self::_error($errcode,$errmsg, $field, $returnType);
+                    $errmsg = forward_static_call_array(array('Validator', '_'. $key), array($field));
+                    if (!empty($errmsg)) {
+                        $validation = self::_error($errmsg, $field, $validation);
                     }
                 } 
+
             }
         }
 
-        return array('errcode' => 0, 'errmsg' => 'ok');
+        return $validation;
     }
 
     /**
@@ -112,43 +84,48 @@ class FormCheck {
      */
     public static function _type($field) {
         
+        if (!isset($field['value'])) {
+            return  "{$field['field']}'s value is not set";
+        }
+
         $errcode = 0;
+        $errmsg = '';
         if (strtolower($field['type']) == 'string') {
 
             if (!is_string($field['value'])) {
-                $errcode = self::ERROR_CODE_TYPE;
+                $errcode = -1;
             }
         } else if (strtolower($field['type']) == 'array') {
         
             if (!is_array($field['value'])) {
-                $errcode = self::ERROR_CODE_TYPE;
+                $errcode = -1;
             }
         } else if (strtolower($field['type']) == 'email') {
             if (filter_var($field['value'], FILTER_VALIDATE_EMAIL) === false) {
-                $errcode = self::ERROR_CODE_TYPE;
+                $errcode = -1;
             }
         } else if (strtolower($field['type']) == 'url') {
             if (filter_var($field['value'], FILTER_VALIDATE_URL) === false) {
-                $errcode = self::ERROR_CODE_TYPE;
+                $errcode = -1;
             } 
         } else if (strtolower($field['type']) == 'date') {
             $dateArr = date_parse($field['value']);
             if ($dateArr && $dateArr['error_count'] === 0) {
                 if (checkdate($dateArr['month'], $dateArr['day'], $dateArr['year']) === false) {
-                    $errcode = self::ERROR_CODE_TYPE;
+                    $errcode = -1;
                 }  
             } else {
-                $errcode = self::ERROR_CODE_TYPE;
+                $errcode = -1;
             }
         } else {
             throw new Exception('not support type');
         }
 
-        if ($errcode) {
+        if ($errcode !== 0) {
             $errmsg = "{$field['field']}'s type not right";
         }
 
-        return array($errcode, $errmsg);
+        return $errmsg;
     }
 
     /**
@@ -162,14 +139,12 @@ class FormCheck {
      */
     private static function _require($field) {
 
-        $errcode = 0;
-
-        if ($field['require'] === true && !$field['value']) {
-            $errcode = self::ERROR_CODE_REQUIRE;
-            $errmsg = "{$field['field']}'s not empty";
+        $errmsg = '';
+        if ($field['require'] === true && !isset($field['value'])) {
+            $errmsg = "{$field['field']}'s value empty";
         }
 
-        return array($errcode, $errmsg);
+        return $errmsg;
     }
 
     /**
@@ -183,12 +158,19 @@ class FormCheck {
      */
     private static function _min_length($field) {
         
-        if (strlen($field['value']) < $field['min_length']) {
-            $errcode = self::ERROR_CODE_MIN_LENGTH;
-            $errmsg = "{$field['field']}'s length at least {$field['min_length']} length"; 
+        $errmsg = '';
+
+        if (function_exists('mb_strlen')) {
+            if (mb_strlen($field['value'], 'UTF-8') < $field['min_length']) {
+                $errmsg = isset($field['errmsg']) ? $field['errmsg'] : "{$field['field']}'s length at least {$field['min_length']} length"; 
+            }
+        } else {
+            if (strlen($field['value']) < $field['min_length']) {
+                $errmsg = isset($field['errmsg']) ? $field['errmsg'] : "{$field['field']}'s length at least {$field['min_length']} length"; 
+            }
         }
 
-        return array($errcode, $errmsg);
+        return $errmsg;
     }
 
     /**
@@ -202,12 +184,18 @@ class FormCheck {
      */
     private static function _max_length($field) {
     
-        if (strlen($field['value']) >  $field['max_length']) {
-            $errcode = self::ERROR_CODE_MAX_LENGTH;
-            $errmsg = "{$field['field']}'s length at most {$field['max_length']} length"; 
+        $errmsg = '';
+        if (function_exists('mb_strlen')) {
+            if (mb_strlen($field['value'], 'UTF-8') >  $field['max_length']) {
+                $errmsg = "{$field['field']}'s length at most {$field['max_length']} length"; 
+            }
+        } else {
+            if (strlen($field['value']) >  $field['max_length']) {
+                $errmsg = "{$field['field']}'s length at most {$field['max_length']} length"; 
+            }
         }
 
-        return array($errcode, $errmsg);
+        return $errmsg;
     }
 
     /**
@@ -221,12 +209,12 @@ class FormCheck {
      */
     private static function _regexp($field) {
 
+        $errmsg = '';
         if (preg_match($field['regexp'], $field['value']) === 0) {
-            $errcode = self::ERROR_CODE_REGEXP;
             $errmsg = "{$field['field']} not match {$field['regexp']} pattern";
         }
 
-        return array($errcode, $errmsg);
+        return $errmsg;
     }
 
     /**
@@ -241,16 +229,21 @@ class FormCheck {
      * @access private
      * @return void
      */
-    private static function _error($errcode, $errmsg, $field, $returnType) {
+    protected static function _error($errmsg, $field, $validation) {
+        $errmsg = isset($field['errmsg']) ? $field['errmsg'] : $errmsg;
+        $validation->addError($errmsg);
+        return $validation;
+    }
 
-        $errmsg = $field['errmsg'] ? $field['errmsg'] : $errmsg;
-        if ($returnType == self::RETURN_TYPE_JSON) {
-            return array('errcode' => $errcode, 'errmsg' => $errmsg);
-        } else if ($returnType == self::RETURN_TYPE_EXCEPTION) {
-            throw new Exception($errmsg, $errcode);
-        } else {
-            throw new Exception('not support return type.');
-        }
+    private static function _success() {
+        $validation = new Validation();
+        return $validation;
+    }
+
+    private static function _quit($errMsg) {
+        $validation = new Validation();
+        $validation->addError($errMsg);
+        return $validation;
     }
 
 }
